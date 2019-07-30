@@ -22,6 +22,7 @@ use TunnelConflux\AutoJWT\Resources\User;
 use Tymon\JWTAuth\Exceptions\TokenBlacklistedException;
 use Tymon\JWTAuth\Exceptions\TokenExpiredException;
 use Tymon\JWTAuth\Exceptions\TokenInvalidException;
+use Tymon\JWTAuth\Facades\JWTAuth;
 
 class LoginController extends BaseController
 {
@@ -97,9 +98,10 @@ class LoginController extends BaseController
     public function logout()
     {
         try {
-            $key = auth('api')->id() ?? null;
+            $key = sha1(auth('api')->id()) ?? null;
 
             auth('api')->logout();
+            auth()->invalidate(true);
             Cache::forget($key);
 
             return response()->json(['success' => true, 'message' => 'Successfully logged out']);
@@ -136,9 +138,7 @@ class LoginController extends BaseController
     {
         $ttl            = auth('api')->factory()->getTTL() * $this->cache_ttl;
         $response_token = Cache::remember($key, $ttl, function () use ($token, $ttl) {
-            $expire = Carbon::now()->addSeconds($ttl);
-
-            return ['token' => $token, 'expires' => $expire];
+            return ['token' => $token, 'expires' => Carbon::now()->addSeconds($ttl)];
         });
 
         return response()->json([
